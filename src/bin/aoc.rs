@@ -22,11 +22,13 @@ fn main() -> anyhow::Result<()> {
     setup_tracing()?;
     ensure_in_aoc_repository()?;
     let pkg_name = PackageName(args.day);
-    write_runner_file(pkg_name, args.overwrite).context("could not write runner")?;
-    update_mod_file(pkg_name).context("could not update mod file")?;
-    write_solver_file(pkg_name).context("could not write solver file")?;
+    if !args.download_only {
+        write_runner_file(pkg_name, args.overwrite).context("could not write runner")?;
+        update_mod_file(pkg_name).context("could not update mod file")?;
+        write_solver_file(pkg_name).context("could not write solver file")?;
+        ensure_test_file(pkg_name, args.overwrite).context("failed to make test file")?;
+    }
     ensure_cached_input(pkg_name, args.year).context("could not ensure cached input")?;
-    ensure_test_file(pkg_name).context("failed to make test file")?;
     Ok(())
 }
 
@@ -39,6 +41,8 @@ struct Args {
     year: i32,
     #[arg(short, long, default_value_t = false)]
     overwrite: bool,
+    #[arg(short, default_value_t = false)]
+    download_only: bool,
 }
 
 fn setup_tracing() -> Result<(), anyhow::Error> {
@@ -241,8 +245,12 @@ fn cache_response(
     Ok(())
 }
 
-fn ensure_test_file(pkg_name: PackageName) -> anyhow::Result<()> {
-    std::fs::File::create(format!("test_input/{pkg_name}.txt"))
-        .context("failed to make test file")
-        .map(|_| ())
+fn ensure_test_file(pkg_name: PackageName, overwrite: bool) -> anyhow::Result<()> {
+    File::options()
+        .create_new(!overwrite)
+        .write(true)
+        .open(format!("test_input/{pkg_name}.txt"))
+        .context("failed to make test file")?;
+
+    Ok(())
 }

@@ -325,7 +325,7 @@ impl<T> Pipe for T {
 
 pub fn get_input(day: &str, is_test: bool) -> anyhow::Result<String> {
     let filepath = if is_test {
-        format!("input/{day}_test.txt")
+        format!("test_input/{day}.txt")
     } else {
         let aoc_cache = std::env::var("AOC_CACHE").context("failed to read AOC_CACHE env var")?;
         format!("{aoc_cache}/2024_{day}.txt")

@@ -54,9 +54,9 @@ fn setup_tracing() -> Result<(), anyhow::Error> {
 }
 
 fn ensure_in_aoc_repository() -> Result<(), anyhow::Error> {
-    let expected_dir = "advent-of-code-2024";
+    let expected_dir = "advent-of-code-";
     let cwd = std::env::current_dir().context("failed to find current dir")?;
-    if !cwd.ends_with(expected_dir) {
+    if !cwd.to_string_lossy().contains(expected_dir) {
         bail!("not in {expected_dir}: {cwd:?}");
     };
 

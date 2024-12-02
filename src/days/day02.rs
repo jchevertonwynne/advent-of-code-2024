@@ -7,21 +7,39 @@ pub fn solve(mut input: &str) -> anyhow::Result<DayResult> {
     let mut report = Vec::new();
     let mut p1 = 0;
     let mut p2 = 0;
+
     while let Some(remaining_input) = parse_next_report(input, &mut report)? {
         input = remaining_input;
-        if is_safe(report.iter().cloned()) {
-            p1 += 1;
-            p2 += 1;
-        } else {
-            for i in 0..report.len() {
-                let copy = SkippingIterator::new(report.iter().cloned(), i);
-                if is_safe(copy) {
-                    p2 += 1;
-                    break;
-                }
+        match is_safe(report.iter().cloned()) {
+            Ok(()) => {
+                p1 += 1;
+                p2 += 1;
             }
+            Err(indices) => match indices {
+                FailOptions::Single(index) => {
+                    for i in (index - 1)..=(std::cmp::min(index + 1, report.len())) {
+                        let copy = SkippingIterator::new(report.iter().cloned(), i);
+                        if is_safe(copy).is_ok() {
+                            p2 += 1;
+                            break;
+                        }
+                    }
+                }
+                FailOptions::Multi(a, b) => {
+                    'outer: for index in [a, b] {
+                        for i in (index - 1)..=(std::cmp::min(index + 1, report.len())) {
+                            let copy = SkippingIterator::new(report.iter().cloned(), i);
+                            if is_safe(copy).is_ok() {
+                                p2 += 1;
+                                break 'outer;
+                            }
+                        }
+                    }
+                }
+            },
         }
     }
+
     (p1, p2).into_result()
 }
 
@@ -73,22 +91,43 @@ where
     }
 }
 
-fn is_safe<I: Iterator<Item = usize> + Clone>(report: I) -> bool {
-    let all_increasing = {
-        let report = report.clone();
-        move || report.clone().tuple_windows().all(|(a, b)| a < b)
-    };
-    let all_decreasing = {
-        let report = report.clone();
-        move || report.clone().tuple_windows().all(|(a, b)| a > b)
-    };
-    let all_close = || {
-        report.tuple_windows().all(|(a, b)| {
-            let diff = a.abs_diff(b);
-            (1..=3).contains(&diff)
-        })
-    };
-    (all_increasing() || all_decreasing()) && all_close()
+#[derive(Debug)]
+enum FailOptions {
+    Single(usize),
+    Multi(usize, usize),
+}
+
+fn is_safe<I: Iterator<Item = usize> + Clone>(report: I) -> Result<(), FailOptions> {
+    let mut fail_asc = None;
+    for ((_, a), (j, b)) in report.clone().enumerate().tuple_windows() {
+        if a >= b {
+            fail_asc = Some(j);
+            break;
+        }
+    }
+    let mut fail_desc = None;
+    for ((_, a), (j, b)) in report.clone().enumerate().tuple_windows() {
+        if a <= b {
+            fail_desc = Some(j);
+            break;
+        }
+    }
+    let mut fail_close = None;
+    for ((_, a), (j, b)) in report.clone().enumerate().tuple_windows() {
+        if !(1..=3).contains(&a.abs_diff(b)) {
+            fail_close = Some(j);
+            break;
+        }
+    }
+
+    if let Some(fail_close) = fail_close {
+        return Err(FailOptions::Single(fail_close));
+    }
+
+    match (fail_asc, fail_desc) {
+        (None, None) | (None, Some(_)) | (Some(_), None) => Ok(()),
+        (Some(fail_asc), Some(fail_desc)) => Err(FailOptions::Multi(fail_asc, fail_desc)),
+    }
 }
 
 #[cfg(test)]

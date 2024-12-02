@@ -31,7 +31,8 @@ fn criterion_benchmark(c: &mut Criterion) {
         }};
     }
 
-    bench_day!(day01);
+    // bench_day!(day01);
+    bench_day!(day02);
 }
 
 criterion_group!(benches, criterion_benchmark);

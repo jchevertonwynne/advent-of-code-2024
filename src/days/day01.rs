@@ -1,7 +1,5 @@
-use std::collections::HashMap;
-
 use anyhow::Context;
-use fxhash::FxHashMap;
+use fxhash::FxHashMap as HashMap;
 
 use crate::{DayResult, IntoDayResult};
 
@@ -11,24 +9,25 @@ pub fn solve(input: &str) -> anyhow::Result<DayResult> {
     a.sort_unstable();
     b.sort_unstable();
 
-    let mut p1 = 0;
-    for (&a, &b) in a.iter().zip(b.iter()) {
-        p1 += a.abs_diff(b)
-    }
+    let p1: usize = a
+        .iter()
+        .cloned()
+        .zip(b.iter().cloned())
+        .map(|(a, b)| a.abs_diff(b))
+        .sum();
 
-    let counts: HashMap<usize, usize, _> = {
-        let mut counts = FxHashMap::default();
+    let counts = {
+        let mut counts = HashMap::<usize, usize>::default();
         for b in b {
             *counts.entry(b).or_default() += 1_usize;
         }
         counts
     };
-    let mut p2: usize = 0;
-    for a in a {
-        let count = counts.get(&a).cloned().unwrap_or_default();
-        let mult = a * count;
-        p2 += mult;
-    }
+
+    let p2: usize = a
+        .into_iter()
+        .map(|a| a * counts.get(&a).cloned().unwrap_or_default())
+        .sum();
 
     (p1, p2).into_result()
 }

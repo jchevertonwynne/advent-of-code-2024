@@ -1,37 +1,52 @@
-use anyhow::Context;
-use regex::Regex;
+use nom::{
+    branch::alt, bytes::complete::tag, character::complete::u64 as nom_u64, combinator::map,
+    sequence::tuple, IResult,
+};
 
 use crate::{DayResult, IntoDayResult};
 
-pub fn solve(input: &str) -> anyhow::Result<DayResult> {
-    let re = Regex::new(r#"(mul\((\d+),(\d+)\)|do\(\)|don't\(\))"#)?;
+pub fn solve(mut input: &str) -> anyhow::Result<DayResult> {
     let mut p1 = 0;
     let mut p2 = 0;
     let mut enabled = true;
-    for found in re.captures_iter(input) {
-        let full = found.get(0).context("should match")?;
-        match full.as_str() {
-            "do()" => enabled = true,
-            "don't()" => enabled = false,
-            _ => {
-                let a: usize = found
-                    .get(2)
-                    .context("should be a first int")?
-                    .as_str()
-                    .parse()?;
-                let b: usize = found
-                    .get(3)
-                    .context("should be a first int")?
-                    .as_str()
-                    .parse()?;
-                p1 += a * b;
+
+    while !input.is_empty() {
+        let Ok((rem, parsed)) = parse_next(input) else {
+            input = &input[1..];
+            continue;
+        };
+        input = rem;
+        match parsed {
+            ParseResult::Do => enabled = true,
+            ParseResult::Dont => enabled = false,
+            ParseResult::Mul(a, b) => {
+                let sum = a * b;
+                p1 += sum;
                 if enabled {
-                    p2 += a * b
+                    p2 += sum;
                 }
             }
         }
     }
+
     (p1, p2).into_result()
+}
+
+enum ParseResult {
+    Do,
+    Dont,
+    Mul(u64, u64),
+}
+
+fn parse_next(s: &str) -> IResult<&str, ParseResult> {
+    alt((
+        map(tag("do()"), |_| ParseResult::Do),
+        map(tag("don't()"), |_| ParseResult::Dont),
+        map(
+            tuple((tag("mul("), nom_u64, tag(","), nom_u64, tag(")"))),
+            |(_, a, _, b, _)| ParseResult::Mul(a, b),
+        ),
+    ))(s)
 }
 
 #[cfg(test)]

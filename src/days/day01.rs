@@ -1,9 +1,9 @@
-use anyhow::Context;
+use anyhow::{Context, Result};
 use fxhash::FxHashMap as HashMap;
 
 use crate::{DayResult, IntoDayResult};
 
-pub fn solve(input: &str) -> anyhow::Result<DayResult> {
+pub fn solve(input: &str) -> Result<DayResult> {
     let (mut a, mut b) = parse_inputs(input)?;
 
     a.sort_unstable();
@@ -32,7 +32,7 @@ pub fn solve(input: &str) -> anyhow::Result<DayResult> {
     (p1, p2).into_result()
 }
 
-fn parse_inputs(s: &str) -> anyhow::Result<(Vec<usize>, Vec<usize>)> {
+fn parse_inputs(s: &str) -> Result<(Vec<usize>, Vec<usize>)> {
     s.lines()
         .try_fold((vec![], vec![]), |(mut a, mut b), line| {
             let mut line = line.split_whitespace();

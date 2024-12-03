@@ -1,9 +1,9 @@
+use anyhow::Result;
 use itertools::Itertools;
-use nom::FindSubstring;
 
 use crate::{DayResult, IntoDayResult};
 
-pub fn solve(mut input: &str) -> anyhow::Result<DayResult> {
+pub fn solve(mut input: &str) -> Result<DayResult> {
     let mut report = Vec::new();
     let mut p1 = 0;
     let mut p2 = 0;
@@ -43,8 +43,8 @@ pub fn solve(mut input: &str) -> anyhow::Result<DayResult> {
     (p1, p2).into_result()
 }
 
-fn parse_next_report<'a>(s: &'a str, into: &mut Vec<usize>) -> anyhow::Result<Option<&'a str>> {
-    let Some(newline) = s.find_substring("\n") else {
+fn parse_next_report<'a>(s: &'a str, into: &mut Vec<usize>) -> Result<Option<&'a str>> {
+    let Some(newline) = s.find('\n') else {
         return Ok(None);
     };
 
@@ -99,24 +99,17 @@ enum FailOptions {
 
 fn is_safe<I: Iterator<Item = usize> + Clone>(report: I) -> Result<(), FailOptions> {
     let mut fail_asc = None;
+    let mut fail_desc = None;
+    let mut fail_close = None;
     for ((_, a), (j, b)) in report.clone().enumerate().tuple_windows() {
         if a >= b {
             fail_asc = Some(j);
-            break;
         }
-    }
-    let mut fail_desc = None;
-    for ((_, a), (j, b)) in report.clone().enumerate().tuple_windows() {
         if a <= b {
             fail_desc = Some(j);
-            break;
         }
-    }
-    let mut fail_close = None;
-    for ((_, a), (j, b)) in report.clone().enumerate().tuple_windows() {
         if !(1..=3).contains(&a.abs_diff(b)) {
             fail_close = Some(j);
-            break;
         }
     }
 

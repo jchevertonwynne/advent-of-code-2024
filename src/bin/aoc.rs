@@ -125,9 +125,10 @@ fn update_mod_file(pkg_name: PackageName) -> Result<(), anyhow::Error> {
 
 fn write_solver_file(pkg_name: PackageName) -> Result<(), anyhow::Error> {
     let solver = format!(
-        r#"use crate::{{DayResult, IntoDayResult}};
+        r#"use anyhow::Result;
+use crate::{{DayResult, IntoDayResult}};
 
-pub fn solve(_input: &str) -> anyhow::Result<DayResult> {{
+pub fn solve(_input: &str) -> Result<DayResult> {{
     ().into_result()
 }}
 

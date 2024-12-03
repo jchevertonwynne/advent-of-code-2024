@@ -17,9 +17,9 @@ pub fn solve(mut input: &str) -> anyhow::Result<DayResult> {
         };
         input = rem;
         match parsed {
-            ParseResult::Do => enabled = true,
-            ParseResult::Dont => enabled = false,
-            ParseResult::Mul(a, b) => {
+            Command::Do => enabled = true,
+            Command::Dont => enabled = false,
+            Command::Mul(a, b) => {
                 let sum = a * b;
                 p1 += sum;
                 if enabled {
@@ -32,19 +32,19 @@ pub fn solve(mut input: &str) -> anyhow::Result<DayResult> {
     (p1, p2).into_result()
 }
 
-enum ParseResult {
+enum Command {
     Do,
     Dont,
     Mul(u64, u64),
 }
 
-fn parse_next(s: &str) -> IResult<&str, ParseResult> {
+fn parse_next(s: &str) -> IResult<&str, Command> {
     alt((
-        map(tag("do()"), |_| ParseResult::Do),
-        map(tag("don't()"), |_| ParseResult::Dont),
+        map(tag("do()"), |_| Command::Do),
+        map(tag("don't()"), |_| Command::Dont),
         map(
             tuple((tag("mul("), nom_u64, tag(","), nom_u64, tag(")"))),
-            |(_, a, _, b, _)| ParseResult::Mul(a, b),
+            |(_, a, _, b, _)| Command::Mul(a, b),
         ),
     ))(s)
 }

@@ -4,7 +4,7 @@ use std::{
     fmt::{Debug, Display, Formatter},
 };
 
-use anyhow::Context;
+use anyhow::{Context, Result};
 use arrayvec::ArrayVec;
 use clap::Parser;
 
@@ -90,7 +90,7 @@ impl From<&'_ str> for Answers {
 }
 
 pub trait IntoDayResult: Sized {
-    fn into_result(self) -> anyhow::Result<DayResult> {
+    fn into_result(self) -> Result<DayResult> {
         Ok(self.into_day_result())
     }
     fn into_day_result(self) -> DayResult;
@@ -323,7 +323,7 @@ impl<T> Pipe for T {
     }
 }
 
-pub fn get_input(day: &str, is_test: bool) -> anyhow::Result<String> {
+pub fn get_input(day: &str, is_test: bool) -> Result<String> {
     let filepath = if is_test {
         format!("test_input/{day}.txt")
     } else {

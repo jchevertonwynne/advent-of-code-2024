@@ -308,21 +308,6 @@ where
     }
 }
 
-trait Pipe: Sized {
-    fn pipe<F, U>(self, f: F) -> U
-    where
-        F: FnMut(Self) -> U;
-}
-
-impl<T> Pipe for T {
-    fn pipe<F, U>(self, mut f: F) -> U
-    where
-        F: FnMut(Self) -> U,
-    {
-        f(self)
-    }
-}
-
 pub fn get_input(day: &str, is_test: bool) -> Result<String> {
     let filepath = if is_test {
         format!("test_input/{day}.txt")

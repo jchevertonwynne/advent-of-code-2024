@@ -35,16 +35,16 @@ fn main() -> anyhow::Result<()> {
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
 struct Args {
-    /// the day to download
+    /// The day to download
     #[arg(default_value_t = Utc::now().day())]
     day: u32,
-    /// the year to download
+    /// The year to download
     #[arg(short, long, default_value_t = Utc::now().year())]
     year: i32,
-    /// whether existing runner & test input files should be overwritten
+    /// Whether existing runner & test input files should be overwritten
     #[arg(short, long, default_value_t = false)]
     overwrite: bool,
-    /// flag to only retrieve input from adventofcode.com
+    /// Only download input from adventofcode.com (if not already cached)
     #[arg(short, default_value_t = false)]
     download_only: bool,
 }

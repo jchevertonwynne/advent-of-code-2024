@@ -5,185 +5,69 @@ pub fn solve(input: &str) -> Result<DayResult> {
     let lines = input.lines().map(str::as_bytes).collect::<Vec<_>>();
 
     let p1 = solve_p1(&lines);
-    let p2 = solve_p2(lines);
+    let p2 = solve_p2(&lines);
 
     (p1, p2).into_result()
 }
 
 fn solve_p1(lines: &[&[u8]]) -> i32 {
-    let mut hori_r = 0;
-    let mut hori_l = 0;
-    for line in lines {
-        for x in 0..lines[0].len() - 3 {
-            let mut success = true;
-            for (i, &b) in b"XMAS".iter().enumerate() {
-                if line[x + i] != b {
-                    success = false;
-                    break;
-                }
-            }
-            if success {
-                hori_r += 1;
-            }
-            let mut success = true;
-            for (i, &b) in b"XMAS".iter().enumerate() {
-                if line[x + 3 - i] != b {
-                    success = false;
-                    break;
-                }
-            }
-            if success {
-                hori_l += 1;
-            }
-        }
-    }
-
-    let mut vert_up = 0;
-    let mut vert_down = 0;
-    for x in 0..lines[0].len() {
-        for y in 0..lines.len() - 3 {
-            let mut success = true;
-            for (i, &b) in b"XMAS".iter().enumerate() {
-                if lines[y + i][x] != b {
-                    success = false;
-                    break;
-                }
-            }
-            if success {
-                vert_up += 1;
-            }
-            let mut success = true;
-            for (i, &b) in b"XMAS".iter().enumerate() {
-                if lines[y + 3 - i][x] != b {
-                    success = false;
-                    break;
-                }
-            }
-            if success {
-                vert_down += 1;
-            }
-        }
-    }
-
-    let mut diag_ur = 0;
-    let mut diag_ul = 0;
-    let mut diag_dr = 0;
-    let mut diag_dl = 0;
-
-    for x in 0..lines[0].len() - 3 {
-        for y in 0..lines.len() - 3 {
-            let mut success = true;
-            for (i, &b) in b"XMAS".iter().enumerate() {
-                if lines[y + i][x + i] != b {
-                    success = false;
-                    break;
-                }
-            }
-            if success {
-                diag_dr += 1;
-            }
-            let mut success = true;
-            for (i, &b) in b"XMAS".iter().enumerate() {
-                if lines[y + i][x + 3 - i] != b {
-                    success = false;
-                    break;
-                }
-            }
-            if success {
-                diag_dl += 1;
-            }
-            let mut success = true;
-            for (i, &b) in b"XMAS".iter().enumerate() {
-                if lines[y + 3 - i][x + i] != b {
-                    success = false;
-                    break;
-                }
-            }
-            if success {
-                diag_ur += 1;
-            }
-            let mut success = true;
-            for (i, &b) in b"XMAS".iter().enumerate() {
-                if lines[y + 3 - i][x + 3 - i] != b {
-                    success = false;
-                    break;
-                }
-            }
-            if success {
-                diag_ul += 1;
-            }
-        }
-    }
-
-    vert_up + vert_down + hori_r + hori_l + diag_ur + diag_ul + diag_dr + diag_dl
+    (0..lines[0].len())
+        .map(|x| {
+            (0..lines.len())
+                .map(|y| {
+                    [
+                        (1, 0),
+                        (-1, 0),
+                        (0, 1),
+                        (0, -1),
+                        (1, 1),
+                        (1, -1),
+                        (-1, 1),
+                        (-1, -1),
+                    ]
+                    .into_iter()
+                    .map(|(dx, dy)| check(lines, x, y, dx, dy, "XMAS") as i32)
+                    .sum::<i32>()
+                })
+                .sum::<i32>()
+        })
+        .sum()
 }
 
-fn solve_p2(lines: Vec<&[u8]>) -> i32 {
-    let mut p2 = 0;
-    for x in 0..lines[0].len() - 2 {
-        for y in 0..lines.len() - 2 {
-            let mut success = true;
-            for (i, &b) in b"MAS".iter().enumerate() {
-                if lines[y + i][x + i] != b {
-                    success = false;
-                    break;
-                }
-            }
-            if success {
-                let mut success = true;
-                for (i, &b) in b"MAS".iter().enumerate() {
-                    if lines[y + i][x + 2 - i] != b {
-                        success = false;
-                        break;
-                    }
-                }
-                if success {
-                    p2 += 1;
-                }
-                let mut success = true;
-                for (i, &b) in b"MAS".iter().enumerate() {
-                    if lines[y + 2 - i][x + i] != b {
-                        success = false;
-                        break;
-                    }
-                }
-                if success {
-                    p2 += 1;
-                }
-            }
-            let mut success = true;
-            for (i, &b) in b"MAS".iter().enumerate() {
-                if lines[y + 2 - i][x + 2 - i] != b {
-                    success = false;
-                    break;
-                }
-            }
-            if success {
-                let mut success = true;
-                for (i, &b) in b"MAS".iter().enumerate() {
-                    if lines[y + i][x + 2 - i] != b {
-                        success = false;
-                        break;
-                    }
-                }
-                if success {
-                    p2 += 1;
-                }
-                let mut success = true;
-                for (i, &b) in b"MAS".iter().enumerate() {
-                    if lines[y + 2 - i][x + i] != b {
-                        success = false;
-                        break;
-                    }
-                }
-                if success {
-                    p2 += 1;
-                }
-            }
-        }
-    }
+fn solve_p2(lines: &[&[u8]]) -> i32 {
+    (0..lines[0].len())
+        .map(|x| {
+            (0..lines.len())
+                .map(|y| {
+                    let leading_mas = || {
+                        check(lines, x + 2, y + 2, -1, -1, "MAS") || check(lines, x, y, 1, 1, "MAS")
+                    };
+                    let trailing_mas = || {
+                        check(lines, x + 2, y, -1, 1, "MAS") || check(lines, x, y + 2, 1, -1, "MAS")
+                    };
 
-    p2
+                    (leading_mas() && trailing_mas()) as i32
+                })
+                .sum::<i32>()
+        })
+        .sum()
+}
+
+fn check(lines: &[&[u8]], x: usize, y: usize, dx: isize, dy: isize, s: &str) -> bool {
+    let x = x as isize;
+    let y = y as isize;
+    s.as_bytes()
+        .iter()
+        .scan((x, y), |(x, y), &b| {
+            let res = lines
+                .get(*y as usize)
+                .and_then(|line| line.get(*x as usize))
+                .map(|&b2| b == b2);
+            *x += dx;
+            *y += dy;
+            Some(res)
+        })
+        .all(|ok| ok.unwrap_or_default())
 }
 
 #[cfg(test)]

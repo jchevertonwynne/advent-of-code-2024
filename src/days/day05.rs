@@ -1,61 +1,47 @@
 use crate::{DayResult, IntoDayResult};
 use anyhow::{Context, Result};
-use fxhash::FxHashMap as HashMap;
 
 pub fn solve(input: &str) -> Result<DayResult> {
-    let (rules, updates) = parse_input(input)?;
+    let (rules, updates) = parse_rulesets(input)?;
 
-    let mut to_left = HashMap::default();
-    let mut ordered = Vec::new();
     let mut p1 = 0;
     let mut p2 = 0;
-    for update in updates.iter() {
+    let mut update = Vec::new();
+    let mut counts = [0; 100];
+    for update_str in updates.lines() {
+        update.clear();
+        for num in update_str.split(",") {
+            update.push(num.parse::<usize>()?);
+        }
+
         let mut contains = [None; 100];
         for (i, u) in update.iter().enumerate() {
             contains[*u] = Some(i);
         }
-        if is_success(&rules, update, &contains) {
+
+        if is_success(&rules, &update, &contains) {
             p1 += update[update.len() / 2];
         } else {
-            ordered.clear();
-            for &u in update {
+            for &u in &update {
                 let count = rules
                     .iter_second(u)
                     .filter(|&first| contains[first].is_some())
                     .count();
-                to_left.insert(u, count);
+                counts[u] = count;
             }
-            for tl in to_left.drain() {
-                ordered.push(tl);
-            }
-            ordered.sort_unstable_by(|a, b| a.1.cmp(&b.1));
-            p2 += ordered[ordered.len() / 2].0;
+            update.sort_unstable_by_key(|&i| counts[i]);
+            p2 += update[update.len() / 2];
         }
     }
 
     (p1, p2).into_result()
 }
 
-fn parse_input(input: &str) -> Result<(RuleSets, Vec<Vec<usize>>), anyhow::Error> {
+fn parse_rulesets(input: &str) -> Result<(RuleSets, &str)> {
     let (rules_str, updates_str) = input.split_once("\n\n").context("no double newline")?;
     let rules = RuleSets::new(rules_str)?;
-    let updates = parse_updates(updates_str)?;
 
-    Ok((rules, updates))
-}
-
-fn parse_updates(updates_str: &str) -> Result<Vec<Vec<usize>>, anyhow::Error> {
-    let mut updates = Vec::new();
-
-    for update_str in updates_str.lines() {
-        let mut update = Vec::<usize>::new();
-        for num in update_str.split(",") {
-            update.push(num.parse()?);
-        }
-        updates.push(update);
-    }
-
-    Ok(updates)
+    Ok((rules, updates_str))
 }
 
 fn is_success(rules: &RuleSets, update: &[usize], contains: &[Option<usize>; 100]) -> bool {

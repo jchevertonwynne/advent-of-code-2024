@@ -19,7 +19,8 @@ pub fn solve(input: &str) -> Result<DayResult> {
         } else {
             ordered.clear();
             for &u in update {
-                let count = BitIter::new(rules.second[u])
+                let count = rules
+                    .iter_second(u)
                     .filter(|&first| contains[first].is_some())
                     .count();
                 to_left.insert(u, count);
@@ -59,12 +60,12 @@ fn parse_updates(updates_str: &str) -> Result<Vec<Vec<usize>>, anyhow::Error> {
 
 fn is_success(rules: &RuleSets, update: &[usize], contains: &[Option<usize>; 100]) -> bool {
     update.iter().enumerate().all(|(i, &u)| {
-        for first in BitIter::new(rules.second[u]) {
+        for first in rules.iter_second(u) {
             if contains[first].map(|n| n > i).unwrap_or(false) {
                 return false;
             }
         }
-        for second in BitIter::new(rules.first[u]) {
+        for second in rules.iter_first(u) {
             if contains[second].map(|n| n < i).unwrap_or(false) {
                 return false;
             }
@@ -96,6 +97,14 @@ impl RuleSets {
             first: rules_first,
             second: rules_second,
         })
+    }
+
+    fn iter_first(&self, i: usize) -> BitIter {
+        BitIter::new(self.first[i])
+    }
+
+    fn iter_second(&self, i: usize) -> BitIter {
+        BitIter::new(self.second[i])
     }
 }
 

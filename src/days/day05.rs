@@ -1,30 +1,11 @@
 use crate::{DayResult, IntoDayResult};
 use anyhow::{Context, Result};
-use fxhash::FxHashMap;
+use fxhash::FxHashMap as HashMap;
 
-pub fn solve(_input: &str) -> Result<DayResult> {
-    let (rules_str, updates_str) = _input.split_once("\n\n").context("no double newline")?;
-    let mut rules_first = std::array::from_fn::<_, 100, _>(|_| Vec::new());
-    let mut rules_second = std::array::from_fn::<_, 100, _>(|_| Vec::new());
-    for rule in rules_str.lines() {
-        let (first, second) = rule.split_once("|").context("no vertical bar")?;
-        let first = first.parse()?;
-        let second = second.parse()?;
-        let rule = Rule { first, second };
-        rules_first[first].push(rule);
-        rules_second[second].push(rule);
-    }
+pub fn solve(input: &str) -> Result<DayResult> {
+    let (rules, updates) = parse_input(input)?;
 
-    let mut updates = Vec::new();
-    for update in updates_str.lines() {
-        let mut u = Vec::<usize>::new();
-        for num in update.split(",") {
-            u.push(num.parse()?);
-        }
-        updates.push(u);
-    }
-
-    let mut to_left = FxHashMap::default();
+    let mut to_left = HashMap::default();
     let mut ordered = Vec::new();
     let mut p1 = 0;
     let mut p2 = 0;
@@ -33,17 +14,14 @@ pub fn solve(_input: &str) -> Result<DayResult> {
         for (i, u) in update.iter().enumerate() {
             contains[*u] = Some(i);
         }
-        if is_success(&rules_first, &rules_second, update, &contains) {
+        if is_success(&rules, update, &contains) {
             p1 += update[update.len() / 2];
         } else {
             ordered.clear();
             for &u in update {
-                let mut count = 0;
-                for r in &rules_second[u] {
-                    if contains[r.first].is_some() {
-                        count += 1;
-                    }
-                }
+                let count = BitIter::new(rules.second[u])
+                    .filter(|&first| contains[first].is_some())
+                    .count();
                 to_left.insert(u, count);
             }
             for tl in to_left.drain() {
@@ -57,52 +35,93 @@ pub fn solve(_input: &str) -> Result<DayResult> {
     (p1, p2).into_result()
 }
 
-fn is_success(
-    rules_first: &[Vec<Rule>],
-    rules_second: &[Vec<Rule>],
-    update: &[usize],
-    contains: &[Option<usize>; 100],
-) -> bool {
-    for (i, &u) in update.iter().enumerate() {
-        for r in &rules_second[u] {
-            if contains[r.first].map(|n| n > i).unwrap_or(false) {
-                return false;
-            }
+fn parse_input(input: &str) -> Result<(RuleSets, Vec<Vec<usize>>), anyhow::Error> {
+    let (rules_str, updates_str) = input.split_once("\n\n").context("no double newline")?;
+    let rules = RuleSets::new(rules_str)?;
+    let updates = parse_updates(updates_str)?;
+
+    Ok((rules, updates))
+}
+
+fn parse_updates(updates_str: &str) -> Result<Vec<Vec<usize>>, anyhow::Error> {
+    let mut updates = Vec::new();
+
+    for update_str in updates_str.lines() {
+        let mut update = Vec::<usize>::new();
+        for num in update_str.split(",") {
+            update.push(num.parse()?);
         }
-        for r in &rules_first[u] {
-            if contains[r.second].map(|n| n < i).unwrap_or(false) {
-                return false;
-            }
-        }
+        updates.push(update);
     }
 
-    true
+    Ok(updates)
 }
 
-struct CurrIter<'a, T> {
-    index: usize,
-    src: &'a [T],
+fn is_success(rules: &RuleSets, update: &[usize], contains: &[Option<usize>; 100]) -> bool {
+    update.iter().enumerate().all(|(i, &u)| {
+        for first in BitIter::new(rules.second[u]) {
+            if contains[first].map(|n| n > i).unwrap_or(false) {
+                return false;
+            }
+        }
+        for second in BitIter::new(rules.first[u]) {
+            if contains[second].map(|n| n < i).unwrap_or(false) {
+                return false;
+            }
+        }
+
+        true
+    })
 }
 
-impl<'a, T> Iterator for CurrIter<'a, T> {
-    type Item = (&'a [T], &'a T, &'a [T]);
+struct RuleSets {
+    first: [u128; 100],
+    second: [u128; 100],
+}
 
+impl RuleSets {
+    fn new(rules_str: &str) -> Result<Self> {
+        let mut rules_first = [0; 100];
+        let mut rules_second = [0; 100];
+
+        for rule in rules_str.lines() {
+            let (first, second) = rule.split_once("|").context("no vertical bar")?;
+            let first: usize = first.parse()?;
+            let second: usize = second.parse()?;
+            rules_first[first] |= 1 << second;
+            rules_second[second] |= 1 << first;
+        }
+
+        Ok(Self {
+            first: rules_first,
+            second: rules_second,
+        })
+    }
+}
+
+struct BitIter {
+    inner: u128,
+}
+
+impl BitIter {
+    fn new(inner: u128) -> Self {
+        Self { inner }
+    }
+}
+
+impl Iterator for BitIter {
+    type Item = usize;
+
+    #[inline]
     fn next(&mut self) -> Option<Self::Item> {
-        if self.index == self.src.len() {
+        let place = self.inner.trailing_zeros();
+        if place == 128 {
             return None;
         }
-        let before = &self.src[0..self.index];
-        let curr = &self.src[self.index];
-        let after = &self.src[self.index + 1..];
-        self.index += 1;
-        Some((before, curr, after))
-    }
-}
+        self.inner &= !(1_u128 << place);
 
-#[derive(Debug, Clone, Copy)]
-struct Rule {
-    first: usize,
-    second: usize,
+        Some(place as usize)
+    }
 }
 
 #[cfg(test)]

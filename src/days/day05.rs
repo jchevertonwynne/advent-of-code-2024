@@ -76,21 +76,21 @@ fn is_success(rules: &RuleSets, update: &[usize], contains: &[Option<usize>; 100
 }
 
 struct RuleSets {
-    first: [u128; 100],
-    second: [u128; 100],
+    first: [Vec<usize>; 100],
+    second: [Vec<usize>; 100],
 }
 
 impl RuleSets {
     fn new(rules_str: &str) -> Result<Self> {
-        let mut rules_first = [0; 100];
-        let mut rules_second = [0; 100];
+        let mut rules_first = std::array::from_fn(|_| Vec::new());
+        let mut rules_second = std::array::from_fn(|_| Vec::new());
 
         for rule in rules_str.lines() {
             let (first, second) = rule.split_once("|").context("no vertical bar")?;
             let first: usize = first.parse()?;
             let second: usize = second.parse()?;
-            rules_first[first] |= 1 << second;
-            rules_second[second] |= 1 << first;
+            rules_first[first].push(second);
+            rules_second[second].push(first);
         }
 
         Ok(Self {
@@ -99,37 +99,12 @@ impl RuleSets {
         })
     }
 
-    fn iter_first(&self, i: usize) -> BitIter {
-        BitIter::new(self.first[i])
+    fn iter_first(&self, i: usize) -> impl Iterator<Item = usize> + '_ {
+        self.first[i].iter().cloned()
     }
 
-    fn iter_second(&self, i: usize) -> BitIter {
-        BitIter::new(self.second[i])
-    }
-}
-
-struct BitIter {
-    inner: u128,
-}
-
-impl BitIter {
-    fn new(inner: u128) -> Self {
-        Self { inner }
-    }
-}
-
-impl Iterator for BitIter {
-    type Item = usize;
-
-    #[inline]
-    fn next(&mut self) -> Option<Self::Item> {
-        let place = self.inner.trailing_zeros();
-        if place == 128 {
-            return None;
-        }
-        self.inner &= !(1_u128 << place);
-
-        Some(place as usize)
+    fn iter_second(&self, i: usize) -> impl Iterator<Item = usize> + '_ {
+        self.second[i].iter().cloned()
     }
 }
 

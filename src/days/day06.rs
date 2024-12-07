@@ -1,4 +1,4 @@
-use std::{ops::Add, time::Instant, vec};
+use std::{ops::Add, vec};
 
 use crate::{DayResult, IntoDayResult};
 use anyhow::Result;
@@ -42,7 +42,7 @@ fn solve_p1(
         .collect::<Vec<_>>();
 
     let mut p1 = 0;
-    for c in &*followed_path {
+    for c in followed_path {
         if !seen[c.y][c.x] {
             p1 += 1;
             followed_path_dedup.push(*c);
@@ -117,7 +117,7 @@ fn solve_p2(
     distances: &mut [Vec<Distances>],
     followed_path: &mut Vec<Coord>,
     followed_path_dedup: &[Coord],
-    seen: &mut [Vec<bool>],
+    world: &mut [Vec<bool>],
 ) -> usize {
     let mut seen_directional = distances
         .iter()
@@ -147,58 +147,66 @@ fn solve_p2(
             };
         }
 
-        seen[v.y][v.x] = true;
-        reallocate_distances(seen, v, distances);
+        world[v.y][v.x] = true;
+        reallocate_distances(world, v, distances);
 
         if solve_p2_solver(position, distances, followed_path, &mut seen_directional) {
             p2 += 1;
         }
 
-        seen[v.y][v.x] = false;
-        reallocate_distances(seen, v, distances);
+        world[v.y][v.x] = false;
+        reallocate_distances(world, v, distances);
     }
 
     p2
 }
 
-fn reallocate_distances(world: &mut [Vec<bool>], v: Coord, distances: &mut [Vec<Distances>]) {
-    let mut d = 1;
-    for (i, &b) in world[v.y].iter().enumerate() {
-        if b {
-            distances[v.y][i].left = 0;
-            d = 0
-        } else {
-            distances[v.y][i].left = d;
-            d += 1;
-        }
-    }
-    let mut d = 1;
-    for (i, &b) in world[v.y].iter().enumerate().rev() {
-        if b {
-            distances[v.y][i].right = 0;
-            d = 0
-        } else {
-            distances[v.y][i].right = d;
-            d += 1;
-        }
-    }
+fn reallocate_distances(world: &[Vec<bool>], v: Coord, distances: &mut [Vec<Distances>]) {
+    allocate_distances_hori(world, v.y, distances);
+    allocate_distances_vert(world, v.x, distances);
+}
+
+fn allocate_distances_vert(world: &[Vec<bool>], x: usize, distances: &mut [Vec<Distances>]) {
     let mut d = 1;
     for j in 0..world.len() {
-        if world[j][v.x] {
-            distances[j][v.x].down = 0;
+        if world[j][x] {
+            distances[j][x].down = 0;
             d = 0
         } else {
-            distances[j][v.x].down = d;
+            distances[j][x].down = d;
             d += 1;
         }
     }
     let mut d = 1;
     for j in (0..world.len()).rev() {
-        if world[j][v.x] {
-            distances[j][v.x].up = 0;
+        if world[j][x] {
+            distances[j][x].up = 0;
             d = 0
         } else {
-            distances[j][v.x].up = d;
+            distances[j][x].up = d;
+            d += 1;
+        }
+    }
+}
+
+fn allocate_distances_hori(world: &[Vec<bool>], y: usize, distances: &mut [Vec<Distances>]) {
+    let mut d = 1;
+    for (i, &wall) in world[y].iter().enumerate() {
+        if wall {
+            distances[y][i].left = 0;
+            d = 0
+        } else {
+            distances[y][i].left = d;
+            d += 1;
+        }
+    }
+    let mut d = 1;
+    for (i, &b) in world[y].iter().enumerate().rev() {
+        if b {
+            distances[y][i].right = 0;
+            d = 0
+        } else {
+            distances[y][i].right = d;
             d += 1;
         }
     }
@@ -207,11 +215,12 @@ fn reallocate_distances(world: &mut [Vec<bool>], v: Coord, distances: &mut [Vec<
 fn solve_p2_solver(
     mut position: Coord,
     distances: &[Vec<Distances>],
-    visited: &mut Vec<Coord>,
+    followed_path: &mut Vec<Coord>,
     seen: &mut [Vec<DirectionalVisited>],
 ) -> bool {
     let mut curr_dir = DxDy { x: 0, y: -1 };
-    visited.push(position);
+    followed_path.clear();
+    followed_path.push(position);
     *seen[position.y][position.x].seen(curr_dir.dir()) = true;
 
     loop {
@@ -234,71 +243,23 @@ fn solve_p2_solver(
 
         let dir = curr_dir.dir();
         position = new_position;
-        visited.push(position);
-        if *seen[position.y][position.x].seen(dir) {
+        followed_path.push(position);
+        if std::mem::replace(seen[position.y][position.x].seen(dir), true) {
             return true;
         }
-        *seen[position.y][position.x].seen(dir) = true;
     }
 }
 
 fn distances(world: &[Vec<bool>]) -> Vec<Vec<Distances>> {
-    let mut res = vec![
-        vec![
-            Distances {
-                up: 0,
-                down: 0,
-                left: 0,
-                right: 0
-            };
-            world[0].len()
-        ];
-        world.len()
-    ];
-    for (j, line) in world.iter().enumerate() {
-        let mut d = 1;
-        for (i, &b) in line.iter().enumerate() {
-            if b {
-                res[j][i].left = 0;
-                d = 0
-            } else {
-                res[j][i].left = d;
-                d += 1;
-            }
-        }
-        let mut d = 1;
-        for (i, &b) in line.iter().enumerate().rev() {
-            if b {
-                res[j][i].right = 0;
-                d = 0
-            } else {
-                res[j][i].right = d;
-                d += 1;
-            }
-        }
+    let mut res = vec![vec![Distances::default(); world[0].len()]; world.len()];
+
+    for j in 0..world.len() {
+        allocate_distances_hori(world, j, &mut res);
     }
     for i in 0..world[0].len() {
-        let mut d = 1;
-        for j in 0..world.len() {
-            if world[j][i] {
-                res[j][i].down = 0;
-                d = 0
-            } else {
-                res[j][i].down = d;
-                d += 1;
-            }
-        }
-        let mut d = 1;
-        for j in (0..world.len()).rev() {
-            if world[j][i] {
-                res[j][i].up = 0;
-                d = 0
-            } else {
-                res[j][i].up = d;
-                d += 1;
-            }
-        }
+        allocate_distances_vert(world, i, &mut res);
     }
+
     res
 }
 
@@ -348,7 +309,7 @@ impl Add<DxDy> for Coord {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Default, Clone, Copy)]
 struct Distances {
     up: usize,
     down: usize,

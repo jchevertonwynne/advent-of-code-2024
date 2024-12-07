@@ -1,3 +1,5 @@
+use std::ops::{Add, Mul};
+
 use crate::{DayResult, IntoDayResult};
 use anyhow::Result;
 use nom::{bytes::complete::tag, combinator::map, sequence::tuple, IResult};
@@ -7,10 +9,10 @@ pub fn solve(input: &str) -> Result<DayResult> {
     let mut p1 = 0;
     let mut p2 = 0;
     for e in entries.iter_mut() {
-        if e.can_be_solved_p1() {
+        if can_be_solved(e.goal, &mut e.numbers, (Add::add, Mul::mul)) {
             p1 += e.goal;
         }
-        if e.can_be_solved_p2() {
+        if can_be_solved(e.goal, &mut e.numbers, (Add::add, Mul::mul, concat)) {
             p2 += e.goal;
         }
     }
@@ -44,16 +46,7 @@ struct Math {
     numbers: Vec<u128>,
 }
 
-impl Math {
-    fn can_be_solved_p1(&mut self) -> bool {
-        can_be_solved_p1(self.goal, &mut self.numbers)
-    }
-    fn can_be_solved_p2(&mut self) -> bool {
-        can_be_solved_p2(self.goal, &mut self.numbers)
-    }
-}
-
-fn can_be_solved_p1(goal: u128, numbers: &mut [u128]) -> bool {
+fn can_be_solved(goal: u128, numbers: &mut [u128], applicable: impl Applicable) -> bool {
     let [a, rem @ ..] = numbers else {
         unreachable!("should not be 0 len");
     };
@@ -66,71 +59,61 @@ fn can_be_solved_p1(goal: u128, numbers: &mut [u128]) -> bool {
         return false;
     }
 
-    let added = a + b;
-    let multiplied = a * b;
-
-    rem[0] = added;
-    let first = can_be_solved_p1(goal, rem);
-    rem[0] = b;
-    if first {
-        return true;
-    }
-
-    rem[0] = multiplied;
-    let second = can_be_solved_p1(goal, rem);
-    rem[0] = b;
-    if second {
-        return true;
-    }
-
-    false
-}
-
-fn can_be_solved_p2(goal: u128, numbers: &mut [u128]) -> bool {
-    let [a, rem @ ..] = numbers else {
-        unreachable!("should not be 0 len");
-    };
-    let a = *a;
-    let Some(b) = rem.first().cloned() else {
-        return a == goal;
-    };
-
-    if a > goal {
-        return false;
-    }
-
-    rem[0] = a + b;
-    let first = can_be_solved_p2(goal, rem);
-    rem[0] = b;
-    if first {
-        return true;
-    }
-
-    rem[0] = a * b;
-    let second = can_be_solved_p2(goal, rem);
-    rem[0] = b;
-    if second {
-        return true;
-    }
-
-    rem[0] = concat(a, b);
-    let second = can_be_solved_p2(goal, rem);
-    rem[0] = b;
-    if second {
-        return true;
-    }
-
-    false
+    applicable.apply(goal, rem, a, b)
 }
 
 fn concat(a: u128, b: u128) -> u128 {
-    let mut _b = b;
-    let mut count = 0;
-    while _b != 0 {
-        _b /= 10;
-        count += 1;
+    if b < 10 {
+        return a * 10 + b;
+    } else if b < 100 {
+        return a * 100 + b;
+    } else if b < 1000 {
+        return a * 1000 + b;
     }
-    a * (10_u128.pow(count)) + b
+    unreachable!("lmao")
+}
+
+trait Applicable {
+    fn apply(self, goal: u128, numbers: &mut [u128], a: u128, b: u128) -> bool;
+}
+
+macro_rules! applicable_logic_impl {
+    ($self:tt, $goal:tt, $numbers:tt, $a:tt, $b:tt, $f:tt) => {
+        $numbers[0] = $f($a, $b);
+        let first = can_be_solved($goal, $numbers, $self);
+        $numbers[0] = $b;
+        if first {
+            return true;
+        }
+    };
+}
+
+impl<F1, F2> Applicable for (F1, F2)
+where
+    F1: Fn(u128, u128) -> u128 + Copy,
+    F2: Fn(u128, u128) -> u128 + Copy,
+{
+    fn apply(self, goal: u128, numbers: &mut [u128], a: u128, b: u128) -> bool {
+        let (f1, f2) = self;
+        applicable_logic_impl!(self, goal, numbers, a, b, f1);
+        applicable_logic_impl!(self, goal, numbers, a, b, f2);
+        false
+    }
+}
+
+impl<F1, F2, F3> Applicable for (F1, F2, F3)
+where
+    F1: Fn(u128, u128) -> u128 + Copy,
+    F2: Fn(u128, u128) -> u128 + Copy,
+    F3: Fn(u128, u128) -> u128 + Copy,
+{
+    fn apply(self, goal: u128, numbers: &mut [u128], a: u128, b: u128) -> bool {
+        let (f1, f2, f3) = self;
+        applicable_logic_impl!(self, goal, numbers, a, b, f1);
+        applicable_logic_impl!(self, goal, numbers, a, b, f2);
+        applicable_logic_impl!(self, goal, numbers, a, b, f3);
+        false
+    }
 }
 
 #[cfg(test)]

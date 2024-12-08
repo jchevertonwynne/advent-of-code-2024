@@ -1,7 +1,6 @@
 use crate::{DayResult, IntoDayResult};
 use anyhow::Result;
 use fxhash::{FxHashMap, FxHashSet};
-use itertools::Itertools;
 use num::integer::gcd;
 
 pub fn solve(input: &str) -> Result<DayResult> {
@@ -9,20 +8,16 @@ pub fn solve(input: &str) -> Result<DayResult> {
 
     let mut locs = FxHashSet::default();
     for sensors in sensor_types.values() {
-        for ab in sensors.iter().combinations(2) {
-            let a = *ab[0];
-            let b = *ab[1];
+        for (a, b) in CombIter::new(sensors) {
             let diff = a - b;
 
-            let in_bounds = |c: Coord| c.x >= 0 && c.x < x && c.y >= 0 && c.y < y;
-
             let an_1 = a + diff;
-            if in_bounds(an_1) {
+            if in_bounds(an_1, x, y) {
                 locs.insert(an_1);
             }
 
             let an_2 = b - diff;
-            if in_bounds(an_2) {
+            if in_bounds(an_2, x, y) {
                 locs.insert(an_2);
             }
         }
@@ -31,27 +26,20 @@ pub fn solve(input: &str) -> Result<DayResult> {
 
     locs.clear();
     for sensors in sensor_types.values() {
-        for ab in sensors.iter().combinations(2) {
-            let a = *ab[0];
-            let b = *ab[1];
+        for (a, b) in CombIter::new(sensors) {
             let diff = a - b;
 
             let lcm = gcd(diff.x, diff.y);
-            let diff = Coord {
-                x: diff.x / lcm,
-                y: diff.y / lcm,
-            };
-
-            let in_bounds = |c: Coord| c.x >= 0 && c.x < x && c.y >= 0 && c.y < y;
+            let diff = diff / lcm;
 
             let mut a_anti = b + diff;
-            while in_bounds(a_anti) {
+            while in_bounds(a_anti, x, y) {
                 locs.insert(a_anti);
                 a_anti = a_anti + diff;
             }
 
             let mut b_anti = a - diff;
-            while in_bounds(b_anti) {
+            while in_bounds(b_anti, x, y) {
                 locs.insert(b_anti);
                 b_anti = b_anti - diff;
             }
@@ -60,6 +48,10 @@ pub fn solve(input: &str) -> Result<DayResult> {
     let p2 = locs.len();
 
     (p1, p2).into_result()
+}
+
+fn in_bounds(c: Coord, x: isize, y: isize) -> bool {
+    c.x >= 0 && c.x < x && c.y >= 0 && c.y < y
 }
 
 fn parse(s: &str) -> Result<(FxHashMap<char, Vec<Coord>>, isize, isize)> {
@@ -91,6 +83,18 @@ struct Coord {
     y: isize,
 }
 
+impl std::ops::Div<isize> for Coord {
+    type Output = Coord;
+
+    fn div(self, rhs: isize) -> Self::Output {
+        let Coord { x: x1, y: y1 } = self;
+        Coord {
+            x: x1 / rhs,
+            y: y1 / rhs,
+        }
+    }
+}
+
 impl std::ops::Sub for Coord {
     type Output = Coord;
 
@@ -114,6 +118,34 @@ impl std::ops::Add for Coord {
             x: x1 + x2,
             y: y1 + y2,
         }
+    }
+}
+
+struct CombIter<'a> {
+    src: &'a [Coord],
+    a: usize,
+    b: usize,
+}
+
+impl CombIter<'_> {
+    fn new(src: &[Coord]) -> Self {
+        Self { src, a: 0, b: 0 }
+    }
+}
+
+impl Iterator for CombIter<'_> {
+    type Item = (Coord, Coord);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.b += 1;
+        if self.b == self.src.len() {
+            self.a += 1;
+            self.b = self.a + 1;
+            if self.a == self.src.len() - 1 {
+                return None;
+            }
+        }
+        Some((self.src[self.a], self.src[self.b]))
     }
 }
 

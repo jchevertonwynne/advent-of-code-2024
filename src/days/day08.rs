@@ -127,8 +127,8 @@ struct CombIter<'a> {
     b: usize,
 }
 
-impl CombIter<'_> {
-    fn new(src: &[Coord]) -> Self {
+impl<'a> CombIter<'a> {
+    fn new(src: &'a [Coord]) -> Self {
         Self { src, a: 0, b: 0 }
     }
 }

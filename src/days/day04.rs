@@ -73,9 +73,8 @@ fn solve_p2(lines: &Container) -> i32 {
 }
 
 fn check(lines: &Container, x: usize, y: usize, dx: isize, dy: isize, s: &str) -> bool {
-    s.as_bytes()
-        .iter()
-        .scan((true, x, y), |(cont, x, y), &b| {
+    s.bytes()
+        .scan((true, x, y), |(cont, x, y), b| {
             if !*cont {
                 return Some(None);
             }
@@ -90,7 +89,7 @@ fn check(lines: &Container, x: usize, y: usize, dx: isize, dy: isize, s: &str) -
             }
             Some(res)
         })
-        .all(|ok| ok.unwrap_or_default())
+        .all(|ok| ok.unwrap_or(false))
 }
 
 #[cfg(test)]

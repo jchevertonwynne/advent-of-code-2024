@@ -24,7 +24,6 @@ pub fn solve(input: &str) -> Result<DayResult> {
     }
     let p1 = locs.len();
 
-    locs.clear();
     for sensors in sensor_types.values() {
         for (a, b) in CombIter::new(sensors) {
             let diff = a - b;

@@ -57,7 +57,6 @@ fn parse_next_report<'a>(s: &'a str, into: &mut Vec<usize>) -> Result<Option<&'a
     Ok(Some(&s[newline + 1..]))
 }
 
-#[derive(Clone)]
 struct SkippingIterator<I> {
     iterated: usize,
     to_skip: usize,
@@ -97,11 +96,11 @@ enum FailOptions {
     Multi(usize, usize),
 }
 
-fn is_safe<I: Iterator<Item = usize> + Clone>(report: I) -> Result<(), FailOptions> {
+fn is_safe<I: Iterator<Item = usize>>(report: I) -> Result<(), FailOptions> {
     let mut fail_asc = None;
     let mut fail_desc = None;
     let mut fail_close = None;
-    for ((_, a), (j, b)) in report.clone().enumerate().tuple_windows() {
+    for ((_, a), (j, b)) in report.enumerate().tuple_windows() {
         if a >= b {
             fail_asc = Some(j);
         }

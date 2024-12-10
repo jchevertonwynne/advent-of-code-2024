@@ -28,38 +28,36 @@ pub fn solve(input: &str) -> Result<DayResult> {
     for mut file in p2_files.into_iter().rev() {
         if let Some((space_index, space)) = p2_spaces
             .iter()
+            .cloned()
             .take_while(|space| space.starts_at < file.starts_at)
             .enumerate()
             .find(|(_, space)| space.size >= file.size)
-            .map(|(i, s)| (i, *s))
         {
             p2_spaces.push(Space {
                 starts_at: file.starts_at,
                 size: file.size,
             });
             p2_spaces.remove(space_index);
-            p2_spaces.sort_unstable_by_key(|f| f.starts_at);
             let new_space = Space {
                 starts_at: space.starts_at + file.size,
                 size: space.size - file.size,
             };
             if new_space.size > 0 {
-                p2_spaces.insert(space_index, new_space);
-                'outer: loop {
-                    for i in 0..p2_spaces.len() - 2 {
-                        if p2_spaces[i + 1].starts_at - p2_spaces[i].starts_at == p2_spaces[i].size
-                        {
-                            let a = p2_spaces.remove(i);
-                            let b = p2_spaces.remove(i);
-                            let c = Space {
-                                starts_at: a.starts_at,
-                                size: a.size + b.size,
-                            };
-                            p2_spaces.insert(i, c);
-                            continue 'outer;
-                        }
+                p2_spaces.push(new_space);
+                p2_spaces.sort_unstable_by_key(|f| f.starts_at);
+                let mut i = 0;
+                while i < p2_spaces.len() - 2 {
+                    if p2_spaces[i + 1].starts_at - p2_spaces[i].starts_at == p2_spaces[i].size {
+                        let a = p2_spaces.remove(i);
+                        let b = p2_spaces[i];
+                        let c = Space {
+                            starts_at: a.starts_at,
+                            size: a.size + b.size,
+                        };
+                        p2_spaces[i] = c;
+                    } else {
+                        i += 1;
                     }
-                    break;
                 }
             }
             file.starts_at = space.starts_at;
@@ -68,13 +66,7 @@ pub fn solve(input: &str) -> Result<DayResult> {
     }
     let p2: u128 = p2_final
         .iter()
-        .map(|v| {
-            let mut res = 0;
-            for i in v.starts_at..v.starts_at + v.size {
-                res += i as u128 * v.id;
-            }
-            res
-        })
+        .flat_map(|v| (v.starts_at..v.starts_at + v.size).map(|i| i as u128 * v.id))
         .sum();
 
     (p1, p2).into_result()
